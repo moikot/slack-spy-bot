@@ -1,0 +1,62 @@
+# This is a weird way of telling Travis to use the fast container-based test
+# runner instead of the slow VM-based runner.
+sudo: required
+dist: xenial
+
+language: go
+
+# Only the last two Go releases are supported by the Go team with security
+# updates. Any older versions be considered deprecated. Don't bother testing
+# with them.
+go:
+- 1.11.x
+
+services:
+  - docker
+
+env:
+  global:
+    - DOCKER_PLATFORMS="linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64/v8"
+    - DOCKER_TAG="${TRAVIS_TAG}"
+    - DOCKER_CLI_EXPERIMENTAL=enabled
+    - APP_FOLDER=/go/src/github.com/moikot/slack-spy-bot/
+    - DOCKER_VERSION=5:18.09.4~3-0~ubuntu-xenial
+
+# Only clone the most recent commit.
+git:
+  depth: 1
+
+before_install:
+  - go get github.com/mattn/goveralls
+
+script:
+  # Restore packages using moikot/golang-dep
+  - >-
+    docker run --rm -v $(pwd):${APP_FOLDER} -w ${APP_FOLDER}
+    moikot/golang-dep ensure -vendor-only
+  # Run all the tests and report the coverage for all the packages
+  - go test -covermode=count -coverprofile=profile.cov -coverpkg=./... ./...
+  - $GOPATH/bin/goveralls -coverprofile=profile.cov -service=travis-ci
+
+deploy:
+  provider: script
+  script: >-
+    bash -c "
+    ./.travis/build.sh ensureDocker &&
+    ./.travis/build.sh build
+    ${APP_FOLDER}
+    ${DOCKER_IMAGE}
+    ${DOCKER_TAG}
+    ${DOCKER_PLATFORMS} &&
+    ./.travis/deploy.sh pushImages
+    ${DOCKER_IMAGE}
+    ${DOCKER_TAG}
+    ${DOCKER_PLATFORMS} &&
+    ./.travis/deploy.sh pushDescription
+    ${DOCKER_IMAGE}
+    README.md"
+  on:
+    tags: true
+
+notifications:
+  email: false
