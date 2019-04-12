@@ -30,7 +30,7 @@ Loop:
 			fmt.Printf("Event received: %s\n", msg.Type)
 			switch ev := msg.Data.(type) {
 
-			case *slack.ConnectedEvent:
+			case *slack.HelloEvent:
 				ids := []string{userId};
 				omsg := rtm.NewSubscribeUserPresence(ids);
 				rtm.SendMessage(omsg)
