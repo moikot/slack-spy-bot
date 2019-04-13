@@ -6,8 +6,8 @@ set -e
 # Creates and pushes a multi-platform manifest.
 #
 # $1 - The image name.
-# $2 - The platfrom-agnostic tag.
-# $3 - The platform-spceific tags.
+# $2 - The platform-agnostic tag.
+# $3 - The platform-specific tags.
 #
 # Examples:
 #
@@ -21,8 +21,8 @@ pushManifest() {
   docker manifest create --amend "${image}:${tag}" ${manifests[@]}
 
   for manifest in "${manifests[@]}"; do
-
-     local annotations=($(echo "${manifest}" | tr '-' '\n'))
+     local name_parts=($(echo "${manifest}" | tr ':' '\n'))
+     local annotations=($(echo "${name_parts[1]}" | tr '-' '\n'))
 
      if [[ "${annotations[3]}" != "" ]]; then
        local variant="--variant ${annotations[3]}"

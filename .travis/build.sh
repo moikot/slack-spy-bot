@@ -4,7 +4,7 @@ set -e
 
 #
 # Ensures that:
-#   1. The lates version of Docker is installed.
+#   1. The latest version of Docker is installed.
 #   2. Experimental mode and buildkit are enabled.
 #
 # $1 - The Docker version.
