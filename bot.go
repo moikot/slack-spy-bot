@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"regexp"
 
@@ -16,8 +15,8 @@ type Bot struct {
 }
 
 var (
-	spyOnRegEx  = regexp.MustCompile(`spy-on\s+<@(\w+)>`)
-	spyOffRegEx = regexp.MustCompile(`spy-off\s+<@(\w+)>`)
+	SpyOnRegEx  = regexp.MustCompile(`(?i)spy-on\s+<@(\w+)>`)
+	SpyOffRegEx = regexp.MustCompile(`(?i)spy-off\s+<@(\w+)>`)
 )
 
 func NewBot(users UserCollection, messenger Messenger) *Bot {
@@ -65,7 +64,7 @@ func (b *Bot) PresenceChange(ev *slack.PresenceChangeEvent) error {
 	if user.LastPresenceState != ev.Presence {
 		b.notifyPresenceChanged(ev.User, ev.Presence, user.NotificationChannel)
 
-		// Save new state
+		// Save new presence
 		user.LastPresenceState = ev.Presence
 		return b.users.Set(ctx, *user)
 	}
@@ -73,24 +72,7 @@ func (b *Bot) PresenceChange(ev *slack.PresenceChangeEvent) error {
 	return nil
 }
 
-func (b *Bot) Message(ev *slack.MessageEvent) error {
-	s, _ := json.Marshal(ev)
-	fmt.Printf("Message: %v\n", string(s))
-
-	match := spyOnRegEx.FindStringSubmatch(ev.Text)
-	if match != nil {
-		return b.spyOn(ev.Channel, match[1])
-	}
-
-	match = spyOffRegEx.FindStringSubmatch(ev.Text)
-	if match != nil {
-		return b.spyOff(match[1])
-	}
-
-	return nil
-}
-
-func (b *Bot) spyOn(channelID string, userID string) error {
+func (b *Bot) SpyOn(ev *slack.MessageEvent, userID string) error {
 	presence, err := b.messenger.GetUserPresence(userID)
 	if err != nil {
 		return err
@@ -98,7 +80,7 @@ func (b *Bot) spyOn(channelID string, userID string) error {
 
 	user := User{
 		UserID:              userID,
-		NotificationChannel: channelID,
+		NotificationChannel: ev.Channel,
 		LastPresenceState:   *presence,
 	}
 
@@ -108,11 +90,11 @@ func (b *Bot) spyOn(channelID string, userID string) error {
 		return err
 	}
 
-	b.notifyPresenceChanged(userID, *presence, channelID)
+	b.notifyPresenceChanged(userID, *presence, ev.Channel)
 	return b.resubscribe()
 }
 
-func (b *Bot) spyOff(userID string) error {
+func (b *Bot) SpyOff(ev *slack.MessageEvent, userID string) error {
 	ctx := context.Background()
 	user, err := b.users.Get(ctx, userID)
 	if err != nil {

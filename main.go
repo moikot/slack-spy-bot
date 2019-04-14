@@ -25,9 +25,10 @@ func main() {
 	messenger := NewMessenger(token)
 	bot := NewBot(users, messenger)
 
-	messenger.AddHandler(bot.Hello)
-	messenger.AddHandler(bot.PresenceChange)
-	messenger.AddHandler(bot.Message)
+	messenger.AddEventHandler(bot.Hello)
+	messenger.AddEventHandler(bot.PresenceChange)
+	messenger.AddMessageHandler(SpyOnRegEx, bot.SpyOn)
+	messenger.AddMessageHandler(SpyOffRegEx, bot.SpyOff)
 
 	messenger.Listen()
 }
