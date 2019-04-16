@@ -16,8 +16,15 @@ type Messenger interface {
 	Listen()
 }
 
+type rtm_ interface {
+	GetUserPresence(user string) (*slack.UserPresence, error)
+	SendMessage(msg *slack.OutgoingMessage)
+	ManageConnection()
+}
+
 type slackMessenger struct {
-	rtm    *slack.RTM
+	rtm *slack.RTM
+	rtm_
 	router Router
 }
 
@@ -28,16 +35,17 @@ func NewMessenger(token string, router Router) Messenger {
 	return &slackMessenger{
 		router: router,
 		rtm:    rtm,
+		rtm_:   rtm,
 	}
 }
 
 func (m *slackMessenger) SubscribeUserPresence(ids []string) {
 	msg := m.rtm.NewSubscribeUserPresence(ids)
-	m.rtm.SendMessage(msg)
+	m.rtm_.SendMessage(msg)
 }
 
 func (m *slackMessenger) GetUserPresence(userID string) (*string, error) {
-	presence, err := m.rtm.GetUserPresence(userID)
+	presence, err := m.rtm_.GetUserPresence(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -46,11 +54,11 @@ func (m *slackMessenger) GetUserPresence(userID string) (*string, error) {
 
 func (m *slackMessenger) SendMessage(text string, channelID string) {
 	msg := m.rtm.NewOutgoingMessage(text, channelID)
-	m.rtm.SendMessage(msg)
+	m.rtm_.SendMessage(msg)
 }
 
 func (m *slackMessenger) Listen() {
-	go m.rtm.ManageConnection()
+	go m.rtm_.ManageConnection()
 
 Loop:
 	for {
@@ -66,6 +74,11 @@ Loop:
 			case *slack.InvalidAuthEvent:
 				fmt.Printf("error: invalid authentication\n")
 				break Loop
+
+			case *slack.DisconnectedEvent:
+				if ev.Intentional {
+					break Loop
+				}
 
 			default:
 				m.router.RouteEvent(ev)

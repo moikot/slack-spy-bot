@@ -40,3 +40,9 @@ func Test_RouteEvent_WhenHandlerExists_CallsEventHandler(t *testing.T) {
 		t.Errorf("receivedEvent is 'false'; want 'true'")
 	}
 }
+
+func Test_RouteEvent_WhenHandlerDoesNotExist_Succeeds(t *testing.T) {
+	router := NewRouter()
+
+	router.RouteEvent(&slack.HelloEvent{})
+}
