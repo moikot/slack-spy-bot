@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"reflect"
-	"regexp"
 
 	"github.com/nlopes/slack"
 )
@@ -15,26 +13,21 @@ type Messenger interface {
 	GetUserPresence(userID string) (*string, error)
 	SendMessage(text string, channelID string)
 
-	AddEventHandler(handler HandlerFunc)
-	AddMessageHandler(regex *regexp.Regexp, handler HandlerFunc)
-
 	Listen()
 }
 
 type slackMessenger struct {
-	eventHandlers   map[string]HandlerFunc
-	messageHandlers map[*regexp.Regexp]HandlerFunc
-	rtm             *slack.RTM
+	rtm    *slack.RTM
+	router Router
 }
 
-func NewMessenger(token string) Messenger {
+func NewMessenger(token string, router Router) Messenger {
 	api := slack.New(token)
 	rtm := api.NewRTM()
 
 	return &slackMessenger{
-		eventHandlers:   map[string]HandlerFunc{},
-		messageHandlers: map[*regexp.Regexp]HandlerFunc{},
-		rtm:             rtm,
+		router: router,
+		rtm:    rtm,
 	}
 }
 
@@ -56,16 +49,6 @@ func (m *slackMessenger) SendMessage(text string, channelID string) {
 	m.rtm.SendMessage(msg)
 }
 
-func (m *slackMessenger) AddEventHandler(handler HandlerFunc) {
-	handlerType := reflect.TypeOf(handler)
-	eventType := handlerType.In(0).Elem().Name()
-	m.eventHandlers[eventType] = handler
-}
-
-func (m *slackMessenger) AddMessageHandler(regexp *regexp.Regexp, handler HandlerFunc) {
-	m.messageHandlers[regexp] = handler
-}
-
 func (m *slackMessenger) Listen() {
 	go m.rtm.ManageConnection()
 
@@ -75,7 +58,7 @@ Loop:
 		case msg := <-m.rtm.IncomingEvents:
 			switch ev := msg.Data.(type) {
 			case *slack.MessageEvent:
-				m.routeMessage(ev)
+				m.router.RouteMessage(ev)
 
 			case *slack.RTMError:
 				fmt.Printf("error: %s\n", ev.Error())
@@ -85,45 +68,8 @@ Loop:
 				break Loop
 
 			default:
-				m.routeEvent(ev)
+				m.router.RouteEvent(ev)
 			}
 		}
 	}
-}
-
-func (m *slackMessenger) routeMessage(event *slack.MessageEvent) {
-	// Try to find matching pattern
-	for pattern, handler := range m.messageHandlers {
-		match := pattern.FindAllStringSubmatch(event.Text, -1)
-		pattern.SubexpNames()
-		if match != nil {
-			for _, captures := range match {
-				var params = make([]reflect.Value, len(captures))
-				params[0] = reflect.ValueOf(event)
-
-				for index, capture := range captures {
-					if index == 0 {
-						continue
-					}
-					params[index] = reflect.ValueOf(capture)
-				}
-
-				reflect.ValueOf(handler).Call(params)
-			}
-		}
-	}
-}
-
-func (m *slackMessenger) routeEvent(event interface{}) {
-	var eventType = reflect.TypeOf(event).Elem().Name()
-
-	var handler = m.eventHandlers[eventType]
-	if handler == nil {
-		return
-	}
-
-	var params = make([]reflect.Value, 1)
-	params[0] = reflect.ValueOf(event)
-
-	reflect.ValueOf(handler).Call(params)
 }

@@ -15,8 +15,8 @@ type Bot struct {
 }
 
 var (
-	SpyOnRegEx  = regexp.MustCompile(`(?i)spy-on\s+<@(\w+)>`)
-	SpyOffRegEx = regexp.MustCompile(`(?i)spy-off\s+<@(\w+)>`)
+	SpyOnRegEx  = regexp.MustCompile(`(?i)spy-on\s*<@(\w+)>`)
+	SpyOffRegEx = regexp.MustCompile(`(?i)spy-off\s*<@(\w+)>`)
 )
 
 func NewBot(users UserCollection, messenger Messenger) *Bot {
@@ -28,30 +28,6 @@ func NewBot(users UserCollection, messenger Messenger) *Bot {
 
 func (b *Bot) Hello(ev *slack.HelloEvent) error {
 	return b.resubscribe()
-}
-
-func (b *Bot) resubscribe() error {
-	ctx := context.Background()
-
-	var ids []string
-	iter := b.users.GetAll(ctx)
-	defer iter.Stop()
-	for {
-		user, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		ids = append(ids, user.UserID)
-	}
-
-	if len(ids) > 0 {
-		b.messenger.SubscribeUserPresence(ids)
-	}
-
-	return nil
 }
 
 func (b *Bot) PresenceChange(ev *slack.PresenceChangeEvent) error {
@@ -108,6 +84,30 @@ func (b *Bot) SpyOff(ev *slack.MessageEvent, userID string) error {
 
 	b.notifyStoppedSpying(userID, user.NotificationChannel)
 	return b.resubscribe()
+}
+
+func (b *Bot) resubscribe() error {
+	ctx := context.Background()
+
+	var ids []string
+	iter := b.users.GetAll(ctx)
+	defer iter.Stop()
+	for {
+		user, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		ids = append(ids, user.UserID)
+	}
+
+	if len(ids) > 0 {
+		b.messenger.SubscribeUserPresence(ids)
+	}
+
+	return nil
 }
 
 func (b *Bot) notifyPresenceChanged(userID string, presence string, channelID string) {

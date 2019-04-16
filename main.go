@@ -22,13 +22,15 @@ func main() {
 	}
 
 	token := getenv("SPY_BOT_TOKEN")
-	messenger := NewMessenger(token)
+	router := NewRouter()
+
+	messenger := NewMessenger(token, router)
 	bot := NewBot(users, messenger)
 
-	messenger.AddEventHandler(bot.Hello)
-	messenger.AddEventHandler(bot.PresenceChange)
-	messenger.AddMessageHandler(SpyOnRegEx, bot.SpyOn)
-	messenger.AddMessageHandler(SpyOffRegEx, bot.SpyOff)
+	router.AddEventHandler(bot.Hello)
+	router.AddEventHandler(bot.PresenceChange)
+	router.AddMessageHandler(SpyOnRegEx, bot.SpyOn)
+	router.AddMessageHandler(SpyOffRegEx, bot.SpyOff)
 
 	messenger.Listen()
 }
