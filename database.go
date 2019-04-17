@@ -16,49 +16,13 @@ type User struct {
 	NotificationChannel string
 }
 
-// A UserIterator allows to iterate a collection of users.
-type UserIterator interface {
-	Next() (*User, error)
-	Stop()
-}
-
-type fsUserIterator struct {
-	iter *firestore.DocumentIterator
-}
-
-func newUserIterator(iter *firestore.DocumentIterator) UserIterator {
-	return &fsUserIterator{
-		iter: iter,
-	}
-}
-
-func (fs *fsUserIterator) Next() (*User, error) {
-	doc, err := fs.iter.Next()
-	if err != nil {
-		return nil, err
-	}
-
-	user := &User{}
-
-	err = doc.DataTo(user)
-	if err != nil {
-		return nil, err
-	}
-
-	return user, nil
-}
-
-func (fs *fsUserIterator) Stop() {
-	fs.iter.Stop()
-}
-
 const users = "Users"
 
 // A UserCollection provides access to users.
 type UserCollection interface {
 	Set(ctx context.Context, user User) error
 	Get(ctx context.Context, userID string) (*User, error)
-	GetAll(ctx context.Context) UserIterator
+	GetAllIDs(ctx context.Context) ([]string, error)
 	Delete(ctx context.Context, userID string) error
 }
 
@@ -109,9 +73,18 @@ func (fs *fsUserCollection) Get(ctx context.Context, userID string) (*User, erro
 	return user, nil
 }
 
-func (fs *fsUserCollection) GetAll(ctx context.Context) UserIterator {
-	iter := fs.client.Collection(users).Documents(ctx)
-	return newUserIterator(iter)
+func (fs *fsUserCollection) GetAllIDs(ctx context.Context) ([]string, error) {
+	docs, err := fs.client.Collection(users).Documents(ctx).GetAll()
+	if err != nil {
+		return nil, err
+	}
+
+	var ids []string
+	for _, doc := range docs {
+		ids = append(ids, doc.Ref.ID)
+	}
+
+	return ids, nil
 }
 
 func (fs *fsUserCollection) Delete(ctx context.Context, userID string) error {

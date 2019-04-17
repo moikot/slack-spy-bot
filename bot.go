@@ -6,7 +6,6 @@ import (
 	"regexp"
 
 	"github.com/nlopes/slack"
-	"google.golang.org/api/iterator"
 )
 
 type Bot struct {
@@ -89,24 +88,12 @@ func (b *Bot) SpyOff(ev *slack.MessageEvent, userID string) error {
 func (b *Bot) resubscribe() error {
 	ctx := context.Background()
 
-	var ids []string
-	iter := b.users.GetAll(ctx)
-	defer iter.Stop()
-	for {
-		user, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		ids = append(ids, user.UserID)
+	ids, err := b.users.GetAllIDs(ctx)
+	if err != nil {
+		return err
 	}
 
-	if len(ids) > 0 {
-		b.messenger.SubscribeUserPresence(ids)
-	}
-
+	b.messenger.SubscribeUserPresence(ids)
 	return nil
 }
 
