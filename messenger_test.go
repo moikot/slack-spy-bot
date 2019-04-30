@@ -30,11 +30,11 @@ func (m *RTMMock) ManageConnection() {
 }
 
 func Test_SubscribeUserPresence_SendsSubscribeUserPresence(t *testing.T) {
-	rtm_ := &RTMMock{}
-	m := newStubbedMessenger(rtm_)
+	rtm := &RTMMock{}
+	m := newStubbedMessenger(rtm)
 
 	ids := []string{"id1", "id2"}
-	rtm_.On("SendMessage",
+	rtm.On("SendMessage",
 		mock.MatchedBy(
 			func(req *slack.OutgoingMessage) bool {
 				return req.Type == "presence_sub" &&
@@ -43,17 +43,17 @@ func Test_SubscribeUserPresence_SendsSubscribeUserPresence(t *testing.T) {
 
 	m.SubscribeUserPresence(ids)
 
-	rtm_.AssertExpectations(t)
+	rtm.AssertExpectations(t)
 }
 
 func Test_GetUserPresence_WhenSucceeds_ReturnsUserPresence(t *testing.T) {
-	rtm_ := &RTMMock{}
-	m := newStubbedMessenger(rtm_)
+	rtm := &RTMMock{}
+	m := newStubbedMessenger(rtm)
 
 	id := "id1"
 	up := &slack.UserPresence{Presence: "presence"}
 
-	rtm_.On("GetUserPresence", id).Once().Return(up, nil)
+	rtm.On("GetUserPresence", id).Once().Return(up, nil)
 
 	presence, _ := m.GetUserPresence(id)
 
@@ -63,13 +63,13 @@ func Test_GetUserPresence_WhenSucceeds_ReturnsUserPresence(t *testing.T) {
 }
 
 func Test_SendMessage_SendsOutgoingMessage(t *testing.T) {
-	rtm_ := &RTMMock{}
-	m := newStubbedMessenger(rtm_)
+	rtm := &RTMMock{}
+	m := newStubbedMessenger(rtm)
 
 	text := "text"
 	channel := "channel"
 
-	rtm_.On("SendMessage",
+	rtm.On("SendMessage",
 		mock.MatchedBy(
 			func(req *slack.OutgoingMessage) bool {
 				return req.Type == "message" &&
@@ -79,15 +79,15 @@ func Test_SendMessage_SendsOutgoingMessage(t *testing.T) {
 
 	m.SendMessage(text, channel)
 
-	rtm_.AssertExpectations(t)
+	rtm.AssertExpectations(t)
 }
 
 func Test_Listen_WhenMessageEventIsReceived_CallsRouteMessage(t *testing.T) {
-	rtm_ := &RTMMock{}
-	m := newStubbedMessenger(rtm_)
+	rtm := &RTMMock{}
+	m := newStubbedMessenger(rtm)
 
 	ev := &slack.MessageEvent{}
-	rtm_.On("ManageConnection").Run(func(args mock.Arguments) {
+	rtm.On("ManageConnection").Run(func(args mock.Arguments) {
 		m.rtm.IncomingEvents <- slack.RTMEvent{
 			Data: ev,
 		}
@@ -107,11 +107,11 @@ func Test_Listen_WhenMessageEventIsReceived_CallsRouteMessage(t *testing.T) {
 }
 
 func Test_Listen_WhenHelloEventIsReceived_CallsRouteEvent(t *testing.T) {
-	rtm_ := &RTMMock{}
-	m := newStubbedMessenger(rtm_)
+	rtm := &RTMMock{}
+	m := newStubbedMessenger(rtm)
 
 	ev := &slack.HelloEvent{}
-	rtm_.On("ManageConnection").Run(func(args mock.Arguments) {
+	rtm.On("ManageConnection").Run(func(args mock.Arguments) {
 		m.rtm.IncomingEvents <- slack.RTMEvent{
 			Data: ev,
 		}
@@ -131,11 +131,11 @@ func Test_Listen_WhenHelloEventIsReceived_CallsRouteEvent(t *testing.T) {
 }
 
 func Test_Listen_WhenInvalidAuthEventIsReceived_Exits(t *testing.T) {
-	rtm_ := &RTMMock{}
-	m := newStubbedMessenger(rtm_)
+	rtm := &RTMMock{}
+	m := newStubbedMessenger(rtm)
 
 	ev := &slack.InvalidAuthEvent{}
-	rtm_.On("ManageConnection").Run(func(args mock.Arguments) {
+	rtm.On("ManageConnection").Run(func(args mock.Arguments) {
 		m.rtm.IncomingEvents <- slack.RTMEvent{
 			Data: ev,
 		}
@@ -149,11 +149,11 @@ func Test_Listen_WhenInvalidAuthEventIsReceived_Exits(t *testing.T) {
 	router.AssertExpectations(t)
 }
 
-func newStubbedMessenger(rtm_ rtm_) *slackMessenger {
+func newStubbedMessenger(rtm rtm_) *slackMessenger {
 	api := slack.New("")
 
 	return &slackMessenger{
 		rtm:  api.NewRTM(),
-		rtm_: rtm_,
+		rtm_: rtm,
 	}
 }
