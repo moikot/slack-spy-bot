@@ -21,7 +21,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	token := getenv("SPY_BOT_TOKEN")
+	token := getenv("BOT_TOKEN")
 	router := NewRouter()
 
 	messenger := NewMessenger(token, router)
