@@ -11,7 +11,7 @@ Notifies when a user goes online and offline.
 You can run it as a Docker container on a Google VM with Docker.
 
 ```shell
-docker run -d -e SPY_BOT_TOKEN=[token] moikot/slack-spy-bot
+docker run -d -e BOT_TOKEN=[token] moikot/slack-spy-bot
 ```
 
 If you've got Golang environment and Dep, you can build it from source and run.
@@ -24,7 +24,7 @@ cd slack-spy-bot
 dep ensure -vendor-only
 
 export GOOGLE_APPLICATION_CREDENTIALS=[credentials]; \
-  export SPY_BOT_TOKEN=[token]; \
+  export BOT_TOKEN=[token]; \
   go run .
 ```
 
