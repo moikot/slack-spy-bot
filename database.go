@@ -26,55 +26,8 @@ type UserCollection interface {
 	Delete(ctx context.Context, userID string) error
 }
 
-type fsDocument interface {
-	Get(ctx context.Context) (*firestore.DocumentSnapshot, error)
-	Set(ctx context.Context, data interface{}, opts ...firestore.SetOption) (*firestore.WriteResult, error)
-	Delete(ctx context.Context, preconds ...firestore.Precondition) (*firestore.WriteResult, error)
-}
-
-type fsDocumentImpl struct {
-	*firestore.DocumentRef
-}
-
-type fsDocIterator interface {
-	GetAll() ([]*firestore.DocumentSnapshot, error)
-}
-
-type fsDocIteratorImpl struct {
-	*firestore.DocumentIterator
-}
-
-type fsCollection interface {
-	Doc(id string) fsDocument
-	Documents(ctx context.Context) fsDocIterator
-}
-
-type fsCollectionImpl struct {
-	*firestore.CollectionRef
-}
-
-func (c *fsCollectionImpl) Doc(id string) fsDocument {
-	return &fsDocumentImpl{DocumentRef: c.CollectionRef.Doc(id)}
-}
-
-func (c *fsCollectionImpl) Documents(ctx context.Context) fsDocIterator {
-	return &fsDocIteratorImpl{DocumentIterator: c.CollectionRef.Documents(ctx)}
-}
-
-type fsClient interface {
-	Collection(path string) fsCollection
-}
-
-type fsClientImpl struct {
-	*firestore.Client
-}
-
-func (c *fsClientImpl) Collection(path string) fsCollection {
-	return &fsCollectionImpl{CollectionRef: c.Client.Collection(path)}
-}
-
 type fsUserCollection struct {
-	client fsClient
+	client *firestore.Client
 }
 
 func NewUserCollection(ctx context.Context) (UserCollection, error) {
@@ -84,7 +37,7 @@ func NewUserCollection(ctx context.Context) (UserCollection, error) {
 	}
 
 	c := &fsUserCollection{
-		client: &fsClientImpl{Client: client},
+		client: client,
 	}
 	return c, nil
 }
